@@ -37,7 +37,7 @@ const results = await Promise.all(
       `,
       {
         variables: {
-          search: `title:B2B discount, 3+ wands (${code})`,
+          search: `${code}`,
         },
       }
     );
