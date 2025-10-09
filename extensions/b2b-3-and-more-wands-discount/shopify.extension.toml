@@ -1,0 +1,28 @@
+api_version = "2025-04"
+
+[[extensions]]
+name = "t:name"
+handle = "b2b-3-and-more-wands-discount"
+uid = "12ee67a5-9fa8-ee12-50c4-0eb6dba5410a254a34ea"
+type = "function"
+
+description = "t:description"
+  [[extensions.targeting]]
+  target = "cart.lines.discounts.generate.run"
+  input_query = "src/cart_lines_discounts_generate_run.graphql"
+  export = "cart-lines-discounts-generate-run"
+
+  [[extensions.targeting]]
+  target = "cart.delivery-options.discounts.generate.run"
+  input_query = "src/cart_delivery_options_discounts_generate_run.graphql"
+  export = "cart-delivery-options-discounts-generate-run"
+
+  [extensions.build]
+  command = ""
+  path = "dist/function.wasm"
+
+  [extensions.capabilities]
+  network_access = true
+
+  [extensions.ui]
+  handle = "b2b-discount-ui"

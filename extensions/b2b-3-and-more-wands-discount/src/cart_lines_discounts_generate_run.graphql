@@ -1,0 +1,29 @@
+query CartInput {
+  fetchResult {
+    jsonBody
+    body
+    status
+  }
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        subtotalAmount {
+          amount
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            productType
+          }
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+}
