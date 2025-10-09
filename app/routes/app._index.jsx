@@ -3,7 +3,7 @@ import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import { DISCOUNT_CODES_TEST, DISCOUNT_CODES } from "../discount-codes";
+import {  DISCOUNT_CODES } from "../discount-codes";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);

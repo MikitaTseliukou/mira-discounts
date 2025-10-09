@@ -150,9 +150,5 @@ const DISCOUNT_CODES = [
   "24WOVEN"
 ];
 
-const DISCOUNT_CODES_TEST = [
-    "REMOVE1",
-    "REMOVE2"
-];
 
-export { DISCOUNT_CODES, DISCOUNT_CODES_TEST };
+export { DISCOUNT_CODES };
