@@ -27,13 +27,6 @@ export function cartDeliveryOptionsDiscountsGenerateRun(input) {
     return {operations: []};
   }
 
-  const enteredDiscountCodes = input.cart?.attribute?.value;
-
-  if (!enteredDiscountCodes || !enteredDiscountCodes.split(', ').some(code => code.startsWith('24'))) {
-    return {operations: []};
-  }
-
-
   const miraKitCartline = input.cart.lines.find((line) => {
     return line.merchandise?.product?.productType === 'mira-kit';
   });
