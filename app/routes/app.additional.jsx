@@ -70,13 +70,21 @@ export const action = async ({ request }) => {
               },
             }
           );
+          const result = await response.json();
 
+          if (result?.data?.discountCodeBulkDelete?.userErrors?.length) {
+            console.log(`ERROR Deleting DISCOUNT CODE: ${code}`);
+            console.log(JSON.stringify(result.data.discountCodeBulkDelete.userErrors));
+          }
           return {
             code,
-            result: await response.json(),
+            result,
           };
         } catch (error) {
+          console.log(`ERROR Deleting DISCOUNT CODE: ${code}`);
+
           console.log(JSON.stringify(error));
+
           return {
             error: true,
             code,
