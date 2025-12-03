@@ -2,7 +2,7 @@
 
 client_id = "81da527cefdfa35c355f02893a2e383f"
 name = "mira-discounts"
-application_url = "https://discounts-generator-9b0a02563b6b.herokuapp.com"
+application_url = "https://discounts-generator-a90fdafdfe11.herokuapp.com"
 embedded = true
 handle = "mira-discounts-1"
 
@@ -26,9 +26,9 @@ scopes = "read_products,write_discounts"
 
 [auth]
 redirect_urls = [
-  "https://discounts-generator-9b0a02563b6b.herokuapp.com/auth/callback",
-  "https://discounts-generator-9b0a02563b6b.herokuapp.com/auth/shopify/callback",
-  "https://discounts-generator-9b0a02563b6b.herokuapp.com/api/auth/callback"
+  "https://discounts-generator-a90fdafdfe11.herokuapp.com/auth/callback",
+  "https://discounts-generator-a90fdafdfe11.herokuapp.com/auth/shopify/callback",
+  "https://discounts-generator-a90fdafdfe11.herokuapp.com/api/auth/callback"
 ]
 
 [pos]
