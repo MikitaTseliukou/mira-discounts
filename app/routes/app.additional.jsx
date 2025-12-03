@@ -49,33 +49,65 @@ export const action = async ({ request }) => {
     const batchResults = await Promise.all(
       microBatch.map(async (code) => {
         try {
-          const response = await admin.graphql(
-            `#graphql 
-            mutation discountCodeBulkDelete($search: String) {
-              discountCodeBulkDelete(search: $search) {
-                job {
+          const responseForCode = await admin.graphql(
+            `#graphql
+              query codeDiscountNodeByCode($code: String!) {
+                codeDiscountNodeByCode(code: $code) {
+                  codeDiscount {
+                    __typename
+                    ... on DiscountCodeBasic {
+                      codesCount {
+                        count
+                      }
+                      shortSummary
+                    }
+                  }
                   id
-                  done
                 }
-                userErrors {
-                  code
-                  field
-                  message
-                }
-              }
-            }`,
+              }`,
             {
               variables: {
-                search: `${code}`,
+                code,
+              },
+            }
+          );
+          const resultForCode = await responseForCode.json();
+          const codeId = resultForCode.data?.codeDiscountNodeByCode?.id;
+
+          if (!codeId) {
+            console.log(`DISCOUNT CODE NOT FOUND FOR DELETION: ${code}`);
+            return {
+              error: true,
+              code,
+              message: "Discount code not found",
+            };
+          }
+
+          const response = await admin.graphql(
+            `#graphql 
+              mutation ($id: ID!) {
+                discountCodeDelete(id: $id) {
+                  deletedCodeDiscountId
+                  userErrors {
+                    field
+                    code
+                    message
+                  }
+                }
+              }`,
+            {
+              variables: {
+                id: codeId,
               },
             }
           );
           const result = await response.json();
 
-          if (result?.data?.discountCodeBulkDelete?.userErrors?.length) {
+          if (result?.data?.discountCodeDelete?.userErrors?.length) {
             console.log(`ERROR Deleting DISCOUNT CODE: ${code}`);
-            console.log(JSON.stringify(result.data.discountCodeBulkDelete.userErrors));
+            console.log(JSON.stringify(result.data.discountCodeDelete.userErrors));
           }
+
           return {
             code,
             result,
@@ -109,10 +141,10 @@ export const action = async ({ request }) => {
     total: DISCOUNT_CODES.length,
     results,
     successful: results.filter(
-      (r) => !r.error && !r.result?.data?.discountCodeAppCreate?.userErrors?.length
+      (r) => !r.error && !r.result?.data?.discountCodeBulkDelete?.userErrors?.length
     ).length,
     failed: results.filter(
-      (r) => r.error || r.result?.data?.discountCodeAppCreate?.userErrors?.length > 0
+      (r) => r.error || r.result?.data?.discountCodeBulkDelete?.userErrors?.length > 0
     ).length,
   };
 };
@@ -200,9 +232,11 @@ export default function Index() {
               </s-text>
             </s-stack>
           )}
+
           {data && data.done && (
             <s-text variant="success">
-              ✓ All {DISCOUNT_CODES.length} discounts deleted successfully!
+              ✓ Completed! {totalSuccessful} discounts deleted successfully
+              {`${totalFailed} failed`}
             </s-text>
           )}
         </s-stack>

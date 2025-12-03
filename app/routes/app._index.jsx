@@ -87,6 +87,7 @@ export const action = async ({ request }) => {
                   discountClasses: ["PRODUCT", "ORDER", "SHIPPING"],
                   startsAt: "2025-01-01T00:00:00",
                   appliesOncePerCustomer: true,
+                  usageLimit: 1,
                   code,
                 },
               },
@@ -228,7 +229,7 @@ export default function AdditionalPage() {
           {data && data.done && (
             <s-text variant="success">
               ✓ Completed! {totalSuccessful} discounts created successfully
-              {totalFailed > 0 && `, ${totalFailed} failed`}
+              {`${totalFailed} failed`}
             </s-text>
           )}
         </s-stack>
