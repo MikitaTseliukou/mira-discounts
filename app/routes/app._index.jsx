@@ -92,10 +92,16 @@ export const action = async ({ request }) => {
               },
             }
           );
+          const result = await response.json();
+
+          if (result?.data?.discountCodeAppCreate?.userErrors?.length) {
+            console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
+            console.log(JSON.stringify(result.data.discountCodeAppCreate.userErrors));
+          }
 
           return {
             code,
-            result: await response.json(),
+            result,
           };
         } catch (error) {
           console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
