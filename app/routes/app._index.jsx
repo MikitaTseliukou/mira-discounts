@@ -154,7 +154,6 @@ export default function AdditionalPage() {
 
     if (!data.done) {
       console.log(`Batch ${data.batchIndex + 1}/${data.totalBatches} completed`);
-      console.log(`Successful: ${data.successful}, Failed: ${data.failed}`);
 
       lastProcessedBatch.current = data.batchIndex;
       setTotalProcessed(data.processed);
