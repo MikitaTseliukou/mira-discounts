@@ -98,6 +98,8 @@ export const action = async ({ request }) => {
             result: await response.json(),
           };
         } catch (error) {
+          console.log(JSON.stringify(error));
+
           return {
             error: true,
             code,

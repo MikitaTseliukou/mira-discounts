@@ -76,6 +76,7 @@ export const action = async ({ request }) => {
             result: await response.json(),
           };
         } catch (error) {
+          console.log(JSON.stringify(error));
           return {
             error: true,
             code,
@@ -129,7 +130,6 @@ export default function Index() {
 
     if (!data.done) {
       console.log(`Batch ${data.batchIndex + 1}/${data.totalBatches} completed`);
-      console.log(`Successful: ${data.successful}, Failed: ${data.failed}`);
 
       lastProcessedBatch.current = data.batchIndex;
 
