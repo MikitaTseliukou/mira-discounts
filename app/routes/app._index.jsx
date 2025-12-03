@@ -3,7 +3,7 @@ import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import {  DISCOUNT_CODES } from "../discount-codes";
+import { DISCOUNT_CODES } from "../discount-codes";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -11,44 +11,88 @@ export const loader = async ({ request }) => {
   return null;
 };
 
+// Helper function to chunk array into smaller batches
+function chunkArray(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
+// Helper function to delay execution
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
+  // Split codes into batches of 10 (adjust based on your rate limit)
+  const batches = chunkArray(DISCOUNT_CODES, 10);
+  const allResults = [];
 
+  // Process each batch sequentially with a delay between batches
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
 
-// Run all deletions in parallel and wait for them to finish
-const results = await Promise.all(
-  DISCOUNT_CODES.map(async (code) => {
-    const response = await admin.graphql(
-      `#graphql 
-      mutation discountCodeBulkDelete($search: String) {
-        discountCodeBulkDelete(search: $search) {
-          job {
-            id
-            done
-          }
-          userErrors {
-            code
-            field
-            message
-          }
+    // Process codes in current batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(async (code) => {
+        try {
+          const response = await admin.graphql(
+            `#graphql 
+            mutation discountCodeBulkDelete($search: String) {
+              discountCodeBulkDelete(search: $search) {
+                job {
+                  id
+                  done
+                }
+                userErrors {
+                  code
+                  field
+                  message
+                }
+              }
+            }`,
+            {
+              variables: {
+                search: `${code}`,
+              },
+            }
+          );
+
+          return {
+            code,
+            result: await response.json(),
+          };
+        } catch (error) {
+          return {
+            error: true,
+            code,
+            message: error.message,
+          };
         }
-      }
-      `,
-      {
-        variables: {
-          search: `${code}`,
-        },
-      }
+      })
     );
 
-    return await response.json();
-  })
-);
+    allResults.push(...batchResults);
 
-  console.log(results);
+    // Add delay between batches (500ms = 0.5 seconds)
+    // Adjust this based on your needs and Shopify's rate limits
+    if (i < batches.length - 1) {
+      await delay(600);
+    }
+
+    // Log progress
+    console.log(
+      `Processed batch ${i + 1}/${batches.length} (${allResults.length}/${DISCOUNT_CODES.length} codes)`
+    );
+  }
+
   return {
-    response: results,
+    response: allResults,
+    total: DISCOUNT_CODES.length,
+    successful: allResults.filter((r) => !r.error).length,
+    failed: allResults.filter((r) => r.error).length,
   };
 };
 
@@ -56,28 +100,31 @@ export default function Index() {
   const fetcher = useFetcher();
   const shopify = useAppBridge();
   const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
+    ["loading", "submitting"].includes(fetcher.state) && fetcher.formMethod === "POST";
   const data = fetcher.data;
 
-
   useEffect(() => {
-    console.log(data)
+    if (data) {
+      console.log(`Total: ${data.total}, Successful: ${data.successful}, Failed: ${data.failed}`);
+      console.log(data);
+    }
   }, [data, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+
+  const deleteDiscounts = () => fetcher.submit({}, { method: "POST" });
 
   return (
     <s-page heading="React Router app template">
-
       <s-section heading="Get started with products">
-        
         <s-stack direction="inline" gap="base">
-          <s-button
-            onClick={generateProduct}
-            {...(isLoading ? { loading: true } : {})}
-          >
+          <s-button onClick={deleteDiscounts} {...(isLoading ? { loading: true } : {})}>
             Delete Discounts
           </s-button>
+          {data && (
+            <s-text>
+              Completed: {data.successful}/{data.total} discounts deleted
+              {data.failed > 0 && `, ${data.failed} failed`}
+            </s-text>
+          )}
         </s-stack>
       </s-section>
     </s-page>

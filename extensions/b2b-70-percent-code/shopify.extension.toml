@@ -1,0 +1,20 @@
+api_version = "2025-04"
+
+[[extensions]]
+name = "t:name"
+handle = "b2b-70-percent-code"
+type = "function"
+uid = "56cdf92f-3e9e-580c-f19b-bc5a17d49112bbbbfe9b"
+description = "t:description"
+
+  [[extensions.targeting]]
+  target = "cart.lines.discounts.generate.run"
+  input_query = "src/cart_lines_discounts_generate_run.graphql"
+  export = "cart-lines-discounts-generate-run"
+
+  [extensions.build]
+  command = ""
+  path = "dist/function.wasm"
+
+  [extensions.ui]
+  handle = "b2b-discount-ui"
