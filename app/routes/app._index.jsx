@@ -98,6 +98,7 @@ export const action = async ({ request }) => {
             result: await response.json(),
           };
         } catch (error) {
+          console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
           console.log(JSON.stringify(error));
 
           return {
