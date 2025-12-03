@@ -82,8 +82,8 @@ export const action = async ({ request }) => {
             {
               variables: {
                 codeAppDiscount: {
-                  title: `B2B discount, 70% (${code})`,
-                  functionHandle: "b2b-70-percent-code",
+                  title: `B2B discount, 75% off 1 Kit (${code})`,
+                  functionHandle: "b2b-75-percent-code-kits",
                   discountClasses: ["PRODUCT", "ORDER", "SHIPPING"],
                   startsAt: "2025-01-01T00:00:00",
                   appliesOncePerCustomer: true,
