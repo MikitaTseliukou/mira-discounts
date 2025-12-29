@@ -1,0 +1,35 @@
+query CartInput {
+  fetchResult {
+    jsonBody
+    body
+    status
+  }
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        subtotalAmount {
+          amount
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            productType
+            inAnyCollection(
+              ids: [
+                "gid://shopify/Collection/641570373925"
+                "gid://shopify/Collection/301429981244"
+              ]
+            )
+          }
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+}
