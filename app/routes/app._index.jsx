@@ -315,6 +315,9 @@ export default function AdditionalPage() {
               <option value="b2b-70-percent-code">B2B 70% - Healthcare Expert’s Choice</option>
               <option value="b2b-3-and-more-wands-discount">B2B 3+ Wands Discount</option>
               <option value="b2b-35-percent-code">B2B 35% - Healthcare Expert’s Choice</option>
+              <option value="b2b-ultra-100-percent">
+                B2B 1 Ultra Kit (30) & 2 Ultra Wands (30) 100% Discount
+              </option>
             </select>
           </s-stack>
 
