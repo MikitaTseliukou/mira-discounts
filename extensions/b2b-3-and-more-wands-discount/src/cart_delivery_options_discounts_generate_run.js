@@ -1,17 +1,14 @@
-import {
-  DeliveryDiscountSelectionStrategy,
-  DiscountClass,
-} from "../generated/api";
+import { DeliveryDiscountSelectionStrategy, DiscountClass } from "../generated/api";
 
 /**
-  * @typedef {import("../generated/api").DeliveryInput} RunInput
-  * @typedef {import("../generated/api").CartDeliveryOptionsDiscountsGenerateRunResult} CartDeliveryOptionsDiscountsGenerateRunResult
-  */
+ * @typedef {import("../generated/api").DeliveryInput} RunInput
+ * @typedef {import("../generated/api").CartDeliveryOptionsDiscountsGenerateRunResult} CartDeliveryOptionsDiscountsGenerateRunResult
+ */
 
 /**
-  * @param {RunInput} input
-  * @returns {CartDeliveryOptionsDiscountsGenerateRunResult}
-  */
+ * @param {RunInput} input
+ * @returns {CartDeliveryOptionsDiscountsGenerateRunResult}
+ */
 
 export function cartDeliveryOptionsDiscountsGenerateRun(input) {
   const firstDeliveryGroup = input.cart.deliveryGroups[0];
@@ -19,28 +16,25 @@ export function cartDeliveryOptionsDiscountsGenerateRun(input) {
     throw new Error("No delivery groups found");
   }
 
-  const hasShippingDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Shipping,
-  );
+  const hasShippingDiscountClass = input.discount.discountClasses.includes(DiscountClass.Shipping);
 
   if (!hasShippingDiscountClass) {
-    return {operations: []};
+    return { operations: [] };
   }
 
   const miraKitCartline = input.cart.lines.find((line) => {
-    return line.merchandise?.product?.productType === 'mira-kit';
+    return line.merchandise?.product?.productType === "mira-kit";
   });
 
   const miraWandsCartQuantity = input.cart.lines.reduce((acc, line) => {
-     if (line.merchandise?.product?.productType === 'mira-wands') {
+    if (line.merchandise?.product?.productType === "mira-wands") {
       acc += line.quantity;
-     }
+    }
 
-     return acc;
+    return acc;
   }, 0);
 
-
-  if ((miraWandsCartQuantity >= 3 || (miraWandsCartQuantity >= 2 && miraKitCartline))) {
+  if (miraWandsCartQuantity >= 3 || (miraWandsCartQuantity >= 2 && miraKitCartline)) {
     return {
       operations: [
         {
@@ -69,5 +63,5 @@ export function cartDeliveryOptionsDiscountsGenerateRun(input) {
     };
   }
 
-  return {operations: []};
+  return { operations: [] };
 }

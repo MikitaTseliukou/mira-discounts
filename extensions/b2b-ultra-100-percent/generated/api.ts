@@ -3069,6 +3069,11 @@ export enum WeightUnit {
   Pounds = 'POUNDS'
 }
 
+export type DeliveryInputVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeliveryInput = { __typename?: 'Input', cart: { __typename?: 'Cart', deliveryGroups: Array<{ __typename?: 'CartDeliveryGroup', id: string }> }, discount: { __typename?: 'Discount', discountClasses: Array<DiscountClass> } };
+
 export type CartInputVariables = Exact<{ [key: string]: never; }>;
 
 

@@ -1,7 +1,7 @@
 import { DiscountClass, ProductDiscountSelectionStrategy } from "../generated/api";
 
 export function cartLinesDiscountsGenerateRun(input) {
-  console.log(JSON.stringify(input));
+  console.log("cart input", JSON.stringify(input));
   if (!input.cart.lines.length) {
     throw new Error("No cart lines found");
   }
