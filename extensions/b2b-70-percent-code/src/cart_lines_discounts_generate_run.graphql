@@ -21,6 +21,7 @@ query CartInput {
             inAnyCollection(
               ids: [
                 "gid://shopify/Collection/641570373925"
+                "gid://shopify/Collection/453125669157"
                 "gid://shopify/Collection/301429981244"
               ]
             )
