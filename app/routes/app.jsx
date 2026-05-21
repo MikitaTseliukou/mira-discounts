@@ -20,6 +20,7 @@ export default function App() {
         <s-link href="/app/discount-list">Discount List</s-link>
 
         <s-link href="/app/additional">Delete discounts (ignore)</s-link>
+        <s-link href="/app/discounts-update">Discounts Update</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
