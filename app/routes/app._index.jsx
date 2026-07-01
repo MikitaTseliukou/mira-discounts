@@ -57,100 +57,92 @@ export const action = async ({ request }) => {
     };
   }
 
+  const MAX_RETRIES = 3;
+
+  async function createCode(code) {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (attempt > 0) await delay(500 * attempt);
+      try {
+        const response = await admin.graphql(
+          `#graphql
+          mutation discountCodeAppCreate($codeAppDiscount: DiscountCodeAppInput!) {
+            discountCodeAppCreate(codeAppDiscount: $codeAppDiscount) {
+              codeAppDiscount {
+                discountId
+                title
+                appDiscountType {
+                  description
+                  functionId
+                }
+                combinesWith {
+                  orderDiscounts
+                  productDiscounts
+                  shippingDiscounts
+                }
+                codes(first: 5) {
+                  nodes {
+                    code
+                  }
+                }
+                status
+                usageLimit
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }`,
+          {
+            variables: {
+              codeAppDiscount: {
+                title: code,
+                functionHandle,
+                discountClasses: ["PRODUCT", "ORDER", "SHIPPING"],
+                startsAt: "2025-01-01T00:00:00",
+                appliesOncePerCustomer,
+                combinesWith: {
+                  productDiscounts: combineProductDiscounts,
+                  orderDiscounts: combineOrderDiscounts,
+                  shippingDiscounts: combineShippingDiscounts,
+                },
+                ...(hasUsageLimit && { usageLimit }),
+                ...(purchaseType === "SUBSCRIPTION" && { appliesOnSubscription: true }),
+                ...(purchaseType === "ONE_TIME" && { appliesOnOneTimePurchase: true }),
+                ...(purchaseType === "BOTH" && {
+                  appliesOnSubscription: true,
+                  appliesOnOneTimePurchase: true,
+                }),
+                code,
+              },
+            },
+          }
+        );
+        const result = await response.json();
+        let error = null;
+        if (result?.data?.discountCodeAppCreate?.userErrors?.length) {
+          console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
+          console.log(JSON.stringify(result.data.discountCodeAppCreate.userErrors));
+          error = result.data.discountCodeAppCreate.userErrors
+            .reduce((acc, curr) => acc + curr.message + " ", "")
+            .trim();
+        }
+        return { code, result, error };
+      } catch (error) {
+        console.log(`ERROR CREATING DISCOUNT CODE: ${code} (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        if (attempt === MAX_RETRIES - 1) {
+          return { error: error.message, code };
+        }
+      }
+    }
+  }
+
   // Process current batch in smaller chunks to avoid rate limits
   const microBatches = chunkArray(currentBatch, 5);
   const results = [];
 
   for (let i = 0; i < microBatches.length; i++) {
-    const microBatch = microBatches[i];
-
-    const batchResults = await Promise.all(
-      microBatch.map(async (code) => {
-        try {
-          const response = await admin.graphql(
-            `#graphql
-            mutation discountCodeAppCreate($codeAppDiscount: DiscountCodeAppInput!) {
-              discountCodeAppCreate(codeAppDiscount: $codeAppDiscount) {
-                codeAppDiscount {
-                  discountId
-                  title
-                  appDiscountType {
-                    description
-                    functionId
-                  }
-                  combinesWith {
-                    orderDiscounts
-                    productDiscounts
-                    shippingDiscounts
-                  }
-                  codes(first: 5) {
-                    nodes {
-                      code
-                    }
-                  }
-                  status
-                  usageLimit
-                }
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }`,
-            {
-              variables: {
-                codeAppDiscount: {
-                  title: code,
-                  functionHandle,
-                  discountClasses: ["PRODUCT", "ORDER", "SHIPPING"],
-                  startsAt: "2025-01-01T00:00:00",
-                  appliesOncePerCustomer,
-                  combinesWith: {
-                    productDiscounts: combineProductDiscounts,
-                    orderDiscounts: combineOrderDiscounts,
-                    shippingDiscounts: combineShippingDiscounts,
-                  },
-                  ...(hasUsageLimit && { usageLimit }),
-                  ...(purchaseType === "SUBSCRIPTION" && { appliesOnSubscription: true }),
-                  ...(purchaseType === "ONE_TIME" && { appliesOnOneTimePurchase: true }),
-                  ...(purchaseType === "BOTH" && {
-                    appliesOnSubscription: true,
-                    appliesOnOneTimePurchase: true,
-                  }),
-                  code,
-                },
-              },
-            }
-          );
-          const result = await response.json();
-          let error = null;
-          if (result?.data?.discountCodeAppCreate?.userErrors?.length) {
-            console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
-            console.log(JSON.stringify(result.data.discountCodeAppCreate.userErrors));
-            error = result.data.discountCodeAppCreate.userErrors
-              .reduce((acc, curr) => {
-                return acc + curr.message + " ";
-              }, "")
-              .trim();
-          }
-
-          return {
-            code,
-            result,
-            error,
-          };
-        } catch (error) {
-          console.log(`ERROR CREATING DISCOUNT CODE: ${code}`);
-          console.log(JSON.stringify(error));
-
-          return {
-            error: error.message,
-            code,
-          };
-        }
-      })
-    );
-
+    const batchResults = await Promise.all(microBatches[i].map(createCode));
     results.push(...batchResults);
 
     if (i < microBatches.length - 1) {
@@ -317,6 +309,12 @@ export default function AdditionalPage() {
               <option value="b2b-35-percent-code">B2B 35% - Healthcare Expert’s Choice</option>
               <option value="b2b-ultra-100-percent">
                 B2B 1 Ultra Kit (30) & 2 Ultra Wands (30) 100% Discount
+              </option>
+              <option value="b2b-win-500-off-code">
+                B2B 500$ off WIN products and free shipping
+              </option>
+              <option value="b2b-win-menopause-500-off-code">
+                B2B 500$ off WIN Menopause products and free shipping
               </option>
             </select>
           </s-stack>

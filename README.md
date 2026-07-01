@@ -226,6 +226,20 @@ Internationalization:
 
 ## Discount function logic
 
+### b2b-win-500-off-code (Selector name: B2B 500$ off WIN products and free shipping)
+
+- Gives $500 off specific product variants.
+- No minimum purchase requirements.
+- Max 1 use total, 1 use per customer.
+- Includes free shipping.
+
+### b2b-win-menopause-500-off-code (Selector name: B2B 500$ off WIN Menopause products and free shipping)
+
+- Same logic as b2b-win-500-off-code but targets different product variants.
+- No minimum purchase requirements.
+- Max 1 use total, 1 use per customer.
+- Includes free shipping.
+
 ### b2b-35-percent-code (Selector name: B2B 35% - Healthcare Expert’s Choice)
 
 - Gives 35% off eligible items that are in a qualifying collection (Healthcare Expert’s Choice).
