@@ -21,6 +21,23 @@ function chunkArray(array, size) {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Functions whose extension targets cart.delivery-options.discounts.generate.run,
+// i.e. they actually implement shipping-discount logic.
+const FUNCTIONS_SUPPORTING_SHIPPING = new Set([
+  "b2b-3-and-more-wands-discount",
+  "b2b-ultra-100-percent",
+  "b2b-win-500-off-code",
+  "b2b-win-menopause-500-off-code",
+]);
+
+function getDiscountClasses(functionHandle) {
+  const classes = ["PRODUCT", "ORDER"];
+  if (FUNCTIONS_SUPPORTING_SHIPPING.has(functionHandle)) {
+    classes.push("SHIPPING");
+  }
+  return classes;
+}
+
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
@@ -98,7 +115,7 @@ export const action = async ({ request }) => {
               codeAppDiscount: {
                 title: code,
                 functionHandle,
-                discountClasses: ["PRODUCT", "ORDER", "SHIPPING"],
+                discountClasses: getDiscountClasses(functionHandle),
                 startsAt: "2025-01-01T00:00:00",
                 appliesOncePerCustomer,
                 combinesWith: {
@@ -316,6 +333,7 @@ export default function AdditionalPage() {
               <option value="b2b-win-menopause-500-off-code">
                 B2B 500$ off WIN Menopause products and free shipping
               </option>
+              <option value="free-ovum-wands">Free Ovum Wands</option>
             </select>
           </s-stack>
 
