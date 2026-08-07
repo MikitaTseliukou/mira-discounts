@@ -1,5 +1,5 @@
 
-api_version = "2025-07"
+api_version = "2026-07"
 [[extensions]]
 # Change the merchant-facing name of the extension in locales/en.default.json
 name = "t:name"
@@ -9,7 +9,7 @@ uid = "a1643e33-1560-d5e2-d30f-b7802d4c6a91b7bc577d"
 
 # Only 1 target can be specified for each Admin block extension
 [[extensions.targeting]]
-module = "./src/BlockExtension.jsx"
+module = "./src/BlockExtension.js"
 target = "admin.discount-details.function-settings.render"
 
 

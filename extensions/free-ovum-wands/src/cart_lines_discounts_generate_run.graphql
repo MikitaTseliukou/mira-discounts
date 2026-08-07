@@ -1,0 +1,26 @@
+query CartInput {
+  cart {
+    lines {
+      id
+      quantity
+      cost {
+        subtotalAmount {
+          amount
+        }
+      }
+      merchandise {
+        ... on ProductVariant {
+          id
+        }
+      }
+    }
+  }
+  localization {
+    country {
+      isoCode
+    }
+  }
+  discount {
+    discountClasses
+  }
+}

@@ -1,0 +1,14 @@
+<script>
+  window.__freeOvumWandsGift = {
+    countryCode: {{ localization.country.iso_code | json }}
+  };
+</script>
+<script src="{{ 'free-gift-cart-sync.js' | asset_url }}" defer="defer"></script>
+
+{% schema %}
+{
+  "name": "Free Ovum Wands gift sync",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}
