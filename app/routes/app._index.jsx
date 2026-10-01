@@ -334,6 +334,7 @@ export default function AdditionalPage() {
                 B2B 500$ off WIN Menopause products and free shipping
               </option>
               <option value="free-ovum-wands">Free Ovum Wands</option>
+              <option value="bfcm-wands-discount">BFCM 33% - Wands (incl. Loop subscriptions)</option>
             </select>
           </s-stack>
 

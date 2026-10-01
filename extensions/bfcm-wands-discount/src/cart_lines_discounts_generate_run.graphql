@@ -1,0 +1,26 @@
+query CartInput {
+  cart {
+    lines {
+      id
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            productType
+            title
+          }
+        }
+      }
+      sellingPlanAllocation {
+        sellingPlan {
+          id
+          name
+          description
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+}
