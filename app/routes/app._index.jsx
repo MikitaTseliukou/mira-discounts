@@ -30,6 +30,10 @@ const FUNCTIONS_SUPPORTING_SHIPPING = new Set([
   "b2b-win-menopause-500-off-code",
 ]);
 
+// Functions whose discount should apply to every subscription payment,
+// not just the first (Shopify defaults recurringCycleLimit to 1).
+const FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS = new Set(["bfcm-wands-discount"]);
+
 function getDiscountClasses(functionHandle) {
   const classes = ["PRODUCT", "ORDER"];
   if (FUNCTIONS_SUPPORTING_SHIPPING.has(functionHandle)) {
@@ -130,6 +134,10 @@ export const action = async ({ request }) => {
                   appliesOnSubscription: true,
                   appliesOnOneTimePurchase: true,
                 }),
+                ...(purchaseType !== "ONE_TIME" &&
+                  FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS.has(functionHandle) && {
+                    recurringCycleLimit: 0,
+                  }),
                 code,
               },
             },
