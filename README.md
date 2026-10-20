@@ -240,6 +240,12 @@ Internationalization:
 - Max 1 use total, 1 use per customer.
 - Includes free shipping.
 
+### carrot-259-code (Selector name: Carrot $259 off Healthcare Expert’s Choice and free shipping)
+
+- Gives $259 off, applied once across all items in the Healthcare Expert’s Choice collection.
+- Available globally: the $259 is converted to the cart's currency using the presentment currency rate.
+- Includes free shipping on all delivery groups.
+
 ### b2b-35-percent-code (Selector name: B2B 35% - Healthcare Expert’s Choice)
 
 - Gives 35% off eligible items that are in a qualifying collection (Healthcare Expert’s Choice).

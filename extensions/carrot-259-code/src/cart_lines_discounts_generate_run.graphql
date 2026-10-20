@@ -1,0 +1,21 @@
+query CartInput {
+  presentmentCurrencyRate
+  cart {
+    lines {
+      id
+      quantity
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            # Healthcare Expert's Choice (live store, test store)
+            inAnyCollection(ids: ["gid://shopify/Collection/453125669157"])
+          }
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+}

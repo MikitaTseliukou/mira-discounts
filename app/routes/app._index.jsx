@@ -28,6 +28,7 @@ const FUNCTIONS_SUPPORTING_SHIPPING = new Set([
   "b2b-ultra-100-percent",
   "b2b-win-500-off-code",
   "b2b-win-menopause-500-off-code",
+  "carrot-259-code",
 ]);
 
 // Functions whose discount should apply to every subscription payment,
@@ -343,6 +344,9 @@ export default function AdditionalPage() {
               </option>
               <option value="free-ovum-wands">Free Ovum Wands</option>
               <option value="bfcm-wands-discount">BFCM 33% - Wands (incl. Loop subscriptions)</option>
+              <option value="carrot-259-code">
+                Carrot $259 off Healthcare Expert’s Choice and free shipping
+              </option>
             </select>
           </s-stack>
 
