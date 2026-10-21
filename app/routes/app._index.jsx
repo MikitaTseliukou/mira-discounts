@@ -1,13 +1,23 @@
 import { useEffect, useState, useRef } from "react";
-import { useFetcher } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
 
-  return null;
+  const response = await admin.graphql(
+    `#graphql
+    query shopTimezone {
+      shop {
+        ianaTimezone
+      }
+    }`
+  );
+  const result = await response.json();
+
+  return { shopTimezone: result?.data?.shop?.ianaTimezone || "UTC" };
 };
 
 // Helper function to chunk array into smaller batches
@@ -35,6 +45,76 @@ const FUNCTIONS_SUPPORTING_SHIPPING = new Set([
 // not just the first (Shopify defaults recurringCycleLimit to 1).
 const FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS = new Set(["bfcm-wands-discount"]);
 
+const END_OF_DAY_TIME = "23:59";
+
+const pad = (n) => String(n).padStart(2, "0");
+
+// Wall-clock parts of `date` as seen in the given IANA timezone.
+function getZonedParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+  };
+}
+
+function toDateInputValue(date, timeZone) {
+  const { year, month, day } = getZonedParts(date, timeZone);
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+function toTimeInputValue(date, timeZone) {
+  const { hour, minute } = getZonedParts(date, timeZone);
+  return `${pad(hour)}:${pad(minute)}`;
+}
+
+// Interprets date ("YYYY-MM-DD") + time ("HH:MM") as wall-clock time in the
+// given IANA timezone (the shop's), returning the matching UTC instant.
+function zonedDateTime(date, time, timeZone) {
+  if (!date) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = (time || "00:00").split(":").map(Number);
+  const wallClockAsUtc = Date.UTC(year, month - 1, day, hour, minute);
+  if (isNaN(wallClockAsUtc)) return null;
+
+  // Shift by the zone's offset; repeat once to settle around DST transitions.
+  let utc = wallClockAsUtc;
+  for (let i = 0; i < 2; i++) {
+    const p = getZonedParts(new Date(utc), timeZone);
+    const zonedAsUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+    utc += wallClockAsUtc - zonedAsUtc;
+  }
+  return new Date(utc);
+}
+
+function getTimeZoneAbbreviation(date, timeZone) {
+  return (
+    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
+      .formatToParts(date)
+      .find((part) => part.type === "timeZoneName")?.value || ""
+  );
+}
+
+const dateTimeInputStyle = {
+  padding: "8px",
+  border: "1px solid #ccc",
+  borderRadius: "4px",
+};
+
 function getDiscountClasses(functionHandle) {
   const classes = ["PRODUCT", "ORDER"];
   if (FUNCTIONS_SUPPORTING_SHIPPING.has(functionHandle)) {
@@ -59,6 +139,8 @@ export const action = async ({ request }) => {
   const combineProductDiscounts = formData.get("combineProductDiscounts") === "true";
   const combineOrderDiscounts = formData.get("combineOrderDiscounts") === "true";
   const combineShippingDiscounts = formData.get("combineShippingDiscounts") === "true";
+  const startsAt = formData.get("startsAt") || new Date().toISOString();
+  const endsAt = formData.get("endsAt") || null;
 
   // Parse CSV codes (newline or comma separated)
   const DISCOUNT_CODES = csvCodes
@@ -121,7 +203,8 @@ export const action = async ({ request }) => {
                 title: code,
                 functionHandle,
                 discountClasses: getDiscountClasses(functionHandle),
-                startsAt: "2025-01-01T00:00:00",
+                startsAt,
+                ...(endsAt && { endsAt }),
                 appliesOncePerCustomer,
                 combinesWith: {
                   productDiscounts: combineProductDiscounts,
@@ -129,12 +212,8 @@ export const action = async ({ request }) => {
                   shippingDiscounts: combineShippingDiscounts,
                 },
                 ...(hasUsageLimit && { usageLimit }),
-                ...(purchaseType === "SUBSCRIPTION" && { appliesOnSubscription: true }),
-                ...(purchaseType === "ONE_TIME" && { appliesOnOneTimePurchase: true }),
-                ...(purchaseType === "BOTH" && {
-                  appliesOnSubscription: true,
-                  appliesOnOneTimePurchase: true,
-                }),
+                appliesOnSubscription: purchaseType !== "ONE_TIME",
+                appliesOnOneTimePurchase: purchaseType !== "SUBSCRIPTION",
                 ...(purchaseType !== "ONE_TIME" &&
                   FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS.has(functionHandle) && {
                     recurringCycleLimit: 0,
@@ -194,6 +273,7 @@ export const action = async ({ request }) => {
 };
 
 export default function AdditionalPage() {
+  const { shopTimezone } = useLoaderData();
   const fetcher = useFetcher();
   const shopify = useAppBridge();
   const [currentBatch, setCurrentBatch] = useState(0);
@@ -216,6 +296,46 @@ export default function AdditionalPage() {
   const [combineProductDiscounts, setCombineProductDiscounts] = useState(false);
   const [combineOrderDiscounts, setCombineOrderDiscounts] = useState(false);
   const [combineShippingDiscounts, setCombineShippingDiscounts] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [hasEndDate, setHasEndDate] = useState(false);
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState(END_OF_DAY_TIME);
+
+  // Default start to "now" in the shop's timezone (set on the client to avoid hydration mismatch)
+  useEffect(() => {
+    const now = new Date();
+    setStartDate(toDateInputValue(now, shopTimezone));
+    setStartTime(toTimeInputValue(now, shopTimezone));
+  }, [shopTimezone]);
+
+  const startTimeZone = getTimeZoneAbbreviation(
+    zonedDateTime(startDate, startTime, shopTimezone) || new Date(),
+    shopTimezone
+  );
+  const endTimeZone = getTimeZoneAbbreviation(
+    zonedDateTime(endDate, endTime, shopTimezone) || new Date(),
+    shopTimezone
+  );
+
+  const buildFormData = (batchIndex) => {
+    const formData = new FormData();
+    formData.append("batchIndex", batchIndex.toString());
+    formData.append("csvCodes", csvCodes);
+    formData.append("appliesOncePerCustomer", appliesOncePerCustomer.toString());
+    formData.append("hasUsageLimit", hasUsageLimit.toString());
+    formData.append("usageLimit", usageLimit.toString());
+    formData.append("purchaseType", purchaseType);
+    formData.append("functionHandle", functionHandle);
+    formData.append("combineProductDiscounts", combineProductDiscounts.toString());
+    formData.append("combineOrderDiscounts", combineOrderDiscounts.toString());
+    formData.append("combineShippingDiscounts", combineShippingDiscounts.toString());
+    const startsAt = zonedDateTime(startDate, startTime, shopTimezone);
+    if (startsAt) formData.append("startsAt", startsAt.toISOString());
+    const endsAt = hasEndDate ? zonedDateTime(endDate, endTime, shopTimezone) : null;
+    if (endsAt) formData.append("endsAt", endsAt.toISOString());
+    return formData;
+  };
 
   const isLoading =
     ["loading", "submitting"].includes(fetcher.state) && fetcher.formMethod === "POST";
@@ -260,18 +380,7 @@ export default function AdditionalPage() {
       setCurrentBatch(data.batchIndex + 1);
 
       // Automatically submit next batch
-      const formData = new FormData();
-      formData.append("batchIndex", (data.batchIndex + 1).toString());
-      formData.append("csvCodes", csvCodes);
-      formData.append("appliesOncePerCustomer", appliesOncePerCustomer.toString());
-      formData.append("hasUsageLimit", hasUsageLimit.toString());
-      formData.append("usageLimit", usageLimit.toString());
-      formData.append("purchaseType", purchaseType);
-      formData.append("functionHandle", functionHandle);
-      formData.append("combineProductDiscounts", combineProductDiscounts.toString());
-      formData.append("combineOrderDiscounts", combineOrderDiscounts.toString());
-      formData.append("combineShippingDiscounts", combineShippingDiscounts.toString());
-      fetcher.submit(formData, { method: "POST" });
+      fetcher.submit(buildFormData(data.batchIndex + 1), { method: "POST" });
     } else if (data.done) {
       console.log("All batches completed!");
       setIsProcessing(false);
@@ -287,24 +396,30 @@ export default function AdditionalPage() {
       return;
     }
 
+    const startsAt = zonedDateTime(startDate, startTime, shopTimezone);
+    if (!startsAt) {
+      shopify.toast.show("Please set a valid start date", { isError: true });
+      return;
+    }
+    if (hasEndDate) {
+      const endsAt = zonedDateTime(endDate, endTime, shopTimezone);
+      if (!endsAt) {
+        shopify.toast.show("Please set a valid end date", { isError: true });
+        return;
+      }
+      if (endsAt <= startsAt) {
+        shopify.toast.show("End date must be after start date", { isError: true });
+        return;
+      }
+    }
+
     setIsProcessing(true);
     setCurrentBatch(0);
     setTotalProcessed(0);
     setTotalSuccessful(0);
     setTotalFailed(0);
     lastProcessedBatch.current = -1;
-    const formData = new FormData();
-    formData.append("batchIndex", "0");
-    formData.append("csvCodes", csvCodes);
-    formData.append("appliesOncePerCustomer", appliesOncePerCustomer.toString());
-    formData.append("hasUsageLimit", hasUsageLimit.toString());
-    formData.append("usageLimit", usageLimit.toString());
-    formData.append("purchaseType", purchaseType);
-    formData.append("functionHandle", functionHandle);
-    formData.append("combineProductDiscounts", combineProductDiscounts.toString());
-    formData.append("combineOrderDiscounts", combineOrderDiscounts.toString());
-    formData.append("combineShippingDiscounts", combineShippingDiscounts.toString());
-    fetcher.submit(formData, { method: "POST" });
+    fetcher.submit(buildFormData(0), { method: "POST" });
   };
 
   const stopProcessing = () => {
@@ -445,6 +560,74 @@ export default function AdditionalPage() {
                 </label>
               </s-stack>
             </s-stack>
+          </s-stack>
+
+          {/* Schedule */}
+          <s-stack direction="vertical" gap="tight">
+            <s-text variant="headingMd">Schedule</s-text>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+              <input
+                type="date"
+                aria-label="Start date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={dateTimeInputStyle}
+                disabled={isProcessing}
+              />
+              <input
+                type="time"
+                aria-label="Start time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                style={dateTimeInputStyle}
+                disabled={isProcessing}
+              />
+              <s-text tone="subdued">{startTimeZone}</s-text>
+              {hasEndDate ? (
+                <>
+                  <span aria-hidden="true">→</span>
+                  <input
+                    type="date"
+                    aria-label="End date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    style={dateTimeInputStyle}
+                    disabled={isProcessing}
+                  />
+                  <input
+                    type="time"
+                    aria-label="End time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    style={dateTimeInputStyle}
+                    disabled={isProcessing}
+                  />
+                  <s-text tone="subdued">{endTimeZone}</s-text>
+                  <s-button
+                    variant="tertiary"
+                    onClick={() => {
+                      setHasEndDate(false);
+                      setEndDate("");
+                    }}
+                    disabled={isProcessing}
+                  >
+                    Remove end date
+                  </s-button>
+                </>
+              ) : (
+                <s-button
+                  icon="plus"
+                  onClick={() => {
+                    setHasEndDate(true);
+                    setEndDate(startDate);
+                  }}
+                  disabled={isProcessing}
+                >
+                  Set end date
+                </s-button>
+              )}
+            </div>
           </s-stack>
 
           {/* Usage Limit Checkbox and Input */}
