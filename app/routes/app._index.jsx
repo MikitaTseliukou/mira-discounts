@@ -234,7 +234,9 @@ export const action = async ({ request }) => {
         }
         return { code, result, error };
       } catch (error) {
-        console.log(`ERROR CREATING DISCOUNT CODE: ${code} (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        console.log(
+          `ERROR CREATING DISCOUNT CODE: ${code} (attempt ${attempt + 1}/${MAX_RETRIES})`
+        );
         if (attempt === MAX_RETRIES - 1) {
           return { error: error.message, code };
         }
@@ -458,9 +460,11 @@ export default function AdditionalPage() {
                 B2B 500$ off WIN Menopause products and free shipping
               </option>
               <option value="free-ovum-wands">Free Ovum Wands</option>
-              <option value="bfcm-wands-discount">BFCM 33% - Wands (incl. Loop subscriptions)</option>
+              <option value="bfcm-wands-discount">
+                BFCM 33% - Wands (incl. Loop subscriptions)
+              </option>
               <option value="carrot-259-code">
-                Carrot $259 off Healthcare Expert’s Choice and free shipping
+                Carrot $269 off Healthcare Expert’s Choice and free shipping
               </option>
             </select>
           </s-stack>

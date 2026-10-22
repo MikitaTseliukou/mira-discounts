@@ -1,7 +1,7 @@
 import { DiscountClass, ProductDiscountSelectionStrategy } from "../generated/api";
 
 // Discount value in the shop's default currency (USD).
-const DISCOUNT_AMOUNT = 259;
+const DISCOUNT_AMOUNT = 269;
 
 export function cartLinesDiscountsGenerateRun(input) {
   console.log(JSON.stringify(input));
