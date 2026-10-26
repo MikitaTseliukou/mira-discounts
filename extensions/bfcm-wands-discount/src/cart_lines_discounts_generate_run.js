@@ -1,11 +1,11 @@
 import { DiscountClass, ProductDiscountSelectionStrategy } from "../generated/api";
 
-const ELIGIBLE_PRODUCT_TYPE = "mira-wands";
+const ELIGIBLE_PRODUCT_TYPES = new Set(["mira-wands", "mira-kits"]);
 // Matched loosely so "™" / "™️" variations in the title don't break the exclusion
 const EXCLUDED_TITLE_FRAGMENT = "cortisol pattern";
 
 // Final discount the customer gets, regardless of purchase type
-const TARGET_DISCOUNT = 0.33;
+const TARGET_DISCOUNT = 0.27;
 
 // Loop selling plan discount by delivery interval (in months).
 // The line price we receive already includes this discount.
@@ -14,24 +14,24 @@ const LOOP_DISCOUNT_BY_INTERVAL = {
   2: 0.05,
 };
 // Used when the plan interval can't be recognised. 10% is the max Loop discount,
-// so assuming it never pushes the final discount above 33%.
+// so assuming it never pushes the final discount above 27%.
 const FALLBACK_LOOP_DISCOUNT = 0.1;
 
-const DISCOUNT_MESSAGE = "33% off Mira Wands";
+const DISCOUNT_MESSAGE = "27%";
 
 /**
  * @typedef {import("../generated/api").CartInput} RunInput
  * @typedef {import("../generated/api").CartLinesDiscountsGenerateRunResult} CartLinesDiscountsGenerateRunResult
  */
 
-function isEligibleWand(merchandise) {
+function isEligibleProduct(merchandise) {
   const product = merchandise?.product;
   if (!product) {
     return false;
   }
 
   return (
-    product.productType?.trim().toLowerCase() === ELIGIBLE_PRODUCT_TYPE &&
+    ELIGIBLE_PRODUCT_TYPES.has(product.productType?.trim().toLowerCase()) &&
     !product.title.toLowerCase().includes(EXCLUDED_TITLE_FRAGMENT)
   );
 }
@@ -81,7 +81,7 @@ export function cartLinesDiscountsGenerateRun(input) {
   }
 
   const candidates = input.cart.lines
-    .filter((line) => isEligibleWand(line.merchandise))
+    .filter((line) => isEligibleProduct(line.merchandise))
     .map((line) => ({
       message: DISCOUNT_MESSAGE,
       targets: [{ cartLine: { id: line.id } }],

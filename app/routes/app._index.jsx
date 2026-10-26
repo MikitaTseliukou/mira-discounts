@@ -461,12 +461,17 @@ export default function AdditionalPage() {
               </option>
               <option value="free-ovum-wands">Free Ovum Wands</option>
               <option value="bfcm-wands-discount">
-                BFCM 33% - Wands (incl. Loop subscriptions)
+                BFCM 27% - Wands & Kits (incl. Loop subscriptions)
               </option>
               <option value="carrot-259-code">
                 Carrot $269 off Healthcare Expert’s Choice and free shipping
               </option>
             </select>
+            {functionHandle === "bfcm-wands-discount" && (
+              <s-text tone="subdued">
+                Note: this discount is 27% off Mira wands and Mira kits.
+              </s-text>
+            )}
           </s-stack>
 
           {/* CSV Upload */}

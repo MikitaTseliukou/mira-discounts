@@ -54,7 +54,7 @@ describe("cartLinesDiscountsGenerateRun", () => {
     expect(result.operations).toHaveLength(0);
   });
 
-  it("returns no operations without eligible wands", () => {
+  it("returns no operations without eligible wands or kits", () => {
     const result = cartLinesDiscountsGenerateRun(
       buildInput({ lines: [line({ productType: "mira-analyzer" })] })
     );
@@ -68,38 +68,45 @@ describe("cartLinesDiscountsGenerateRun", () => {
     expect(result.operations).toHaveLength(0);
   });
 
-  it("applies 33% to a one-time wand order", () => {
+  it("applies 27% to a one-time wand order", () => {
     const result = cartLinesDiscountsGenerateRun(buildInput({ lines: [line()] }));
     expect(result.operations[0].productDiscountsAdd.selectionStrategy).toBe("ALL");
-    expect(percentages(result)).toEqual([{ id: "gid://shopify/CartLine/wand", value: 33 }]);
+    expect(percentages(result)).toEqual([{ id: "gid://shopify/CartLine/wand", value: 27 }]);
   });
 
-  it("applies 29.47% on top of the 5% Loop discount for every-2-months plans", () => {
+  it("applies 27% to a one-time kit order", () => {
+    const result = cartLinesDiscountsGenerateRun(
+      buildInput({ lines: [line({ productType: "mira-kits", title: "Mira Fertility Plus Starter Kit" })] })
+    );
+    expect(percentages(result)).toEqual([{ id: "gid://shopify/CartLine/wand", value: 27 }]);
+  });
+
+  it("applies 23.16% on top of the 5% Loop discount for every-2-months plans", () => {
     const result = cartLinesDiscountsGenerateRun(
       buildInput({ lines: [line({ sellingPlanName: "Deliver every 2 months" })] })
     );
-    expect(percentages(result)[0].value).toBe(29.47);
+    expect(percentages(result)[0].value).toBe(23.16);
   });
 
-  it("applies 25.56% on top of the 10% Loop discount for every-month plans", () => {
+  it("applies 18.89% on top of the 10% Loop discount for every-month plans", () => {
     const result = cartLinesDiscountsGenerateRun(
       buildInput({ lines: [line({ sellingPlanName: "Deliver every month" })] })
     );
-    expect(percentages(result)[0].value).toBe(25.56);
+    expect(percentages(result)[0].value).toBe(18.89);
   });
 
   it("treats 'monthly' plans as every 1 month", () => {
     const result = cartLinesDiscountsGenerateRun(
       buildInput({ lines: [line({ sellingPlanName: "Monthly subscription" })] })
     );
-    expect(percentages(result)[0].value).toBe(25.56);
+    expect(percentages(result)[0].value).toBe(18.89);
   });
 
   it("assumes the max 10% Loop discount for unrecognised plans", () => {
     const result = cartLinesDiscountsGenerateRun(
       buildInput({ lines: [line({ sellingPlanName: "Subscribe & save" })] })
     );
-    expect(percentages(result)[0].value).toBe(25.56);
+    expect(percentages(result)[0].value).toBe(18.89);
   });
 
   it("discounts each eligible line separately and skips the rest", () => {
@@ -107,6 +114,7 @@ describe("cartLinesDiscountsGenerateRun", () => {
       buildInput({
         lines: [
           line({ id: "gid://shopify/CartLine/one-time" }),
+          line({ id: "gid://shopify/CartLine/kit", productType: "mira-kits" }),
           line({ id: "gid://shopify/CartLine/sub", sellingPlanName: "Deliver every 2 months" }),
           line({ id: "gid://shopify/CartLine/cortisol", title: "Mira Cortisol Pattern™ Wands" }),
           line({ id: "gid://shopify/CartLine/analyzer", productType: "mira-analyzer" }),
@@ -114,8 +122,9 @@ describe("cartLinesDiscountsGenerateRun", () => {
       })
     );
     expect(percentages(result)).toEqual([
-      { id: "gid://shopify/CartLine/one-time", value: 33 },
-      { id: "gid://shopify/CartLine/sub", value: 29.47 },
+      { id: "gid://shopify/CartLine/one-time", value: 27 },
+      { id: "gid://shopify/CartLine/kit", value: 27 },
+      { id: "gid://shopify/CartLine/sub", value: 23.16 },
     ]);
   });
 });
