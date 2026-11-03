@@ -3,7 +3,31 @@ import { useFetcher } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import { DISCOUNT_CODES_FOR_UPDATE } from "../discount-codes";
+
+const BATCH_SIZE = 50; // Process 50 codes per request
+
+// Parse a single-column CSV with a "Code" header into a list of unique codes.
+// Shopify codes are case-insensitive, so duplicates are detected ignoring case.
+// Trailing notes in parentheses, e.g. "MORGAN30 (Panorama $30 off)", are stripped.
+function parseCodesCsv(text) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.split(",")[0].replace(/^"|"$/g, "").trim());
+
+  if (lines[0]?.toLowerCase() === "code") {
+    lines.shift();
+  }
+
+  const seen = new Set();
+  const codes = [];
+  for (const line of lines) {
+    const code = line.replace(/\s*\(.*\)\s*$/, "").trim();
+    if (!code || seen.has(code.toUpperCase())) continue;
+    seen.add(code.toUpperCase());
+    codes.push(code);
+  }
+  return codes;
+}
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -26,16 +50,13 @@ export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
   const batchIndex = parseInt(formData.get("batchIndex") || "0");
-  const batchSize = 50; // Process 50 codes per request
+  const total = parseInt(formData.get("total") || "0");
+  const currentBatch = JSON.parse(formData.get("codes") || "[]");
 
-  // Get the current batch
-  const allBatches = chunkArray(DISCOUNT_CODES_FOR_UPDATE, batchSize);
-  const currentBatch = allBatches[batchIndex];
-
-  if (!currentBatch) {
+  if (!currentBatch.length) {
     return {
       done: true,
-      total: DISCOUNT_CODES_FOR_UPDATE.length,
+      total,
     };
   }
 
@@ -105,7 +126,7 @@ export const action = async ({ request }) => {
                 basicCodeDiscount: {
                   customerGets: {
                     value: {
-                      percentage: 0.25,
+                      percentage: 0.29,
                     },
                   },
                 },
@@ -146,9 +167,9 @@ export const action = async ({ request }) => {
   return {
     done: false,
     batchIndex,
-    totalBatches: allBatches.length,
-    processed: (batchIndex + 1) * batchSize,
-    total: DISCOUNT_CODES_FOR_UPDATE.length,
+    totalBatches: Math.ceil(total / BATCH_SIZE),
+    processed: Math.min((batchIndex + 1) * BATCH_SIZE, total),
+    total,
     results,
     successful: results.filter(
       (r) => !r.error && !r.result?.data?.discountCodeBasicUpdate?.userErrors?.length
@@ -168,7 +189,28 @@ export default function DiscountsUpdate() {
   const [totalFailed, setTotalFailed] = useState(0);
   const [failedCodes, setFailedCodes] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [codes, setCodes] = useState([]);
+  const [fileName, setFileName] = useState("");
   const lastProcessedBatch = useRef(-1);
+
+  const submitBatch = (batchIndex) => {
+    const batchCodes = codes.slice(batchIndex * BATCH_SIZE, (batchIndex + 1) * BATCH_SIZE);
+    const formData = new FormData();
+    formData.append("batchIndex", batchIndex.toString());
+    formData.append("total", codes.length.toString());
+    formData.append("codes", JSON.stringify(batchCodes));
+    fetcher.submit(formData, { method: "POST" });
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const parsedCodes = parseCodesCsv(await file.text());
+    setFileName(file.name);
+    setCodes(parsedCodes);
+    shopify.toast.show(`Loaded ${parsedCodes.length} codes from ${file.name}`);
+  };
 
   const isLoading =
     ["loading", "submitting"].includes(fetcher.state) && fetcher.formMethod === "POST";
@@ -197,9 +239,7 @@ export default function DiscountsUpdate() {
       }
 
       // Automatically submit next batch
-      const formData = new FormData();
-      formData.append("batchIndex", (data.batchIndex + 1).toString());
-      fetcher.submit(formData, { method: "POST" });
+      submitBatch(data.batchIndex + 1);
     } else if (data && data.done) {
       console.log("All batches completed!");
       setIsProcessing(false);
@@ -217,9 +257,7 @@ export default function DiscountsUpdate() {
     setTotalFailed(0);
     setFailedCodes([]);
     lastProcessedBatch.current = -1;
-    const formData = new FormData();
-    formData.append("batchIndex", "0");
-    fetcher.submit(formData, { method: "POST" });
+    submitBatch(0);
   };
 
   const stopProcessing = () => {
@@ -230,11 +268,25 @@ export default function DiscountsUpdate() {
     <s-page heading="Discounts Update">
       <s-section heading="Update Discounts (20% → 25%)">
         <s-stack direction="vertical" gap="base">
+          <s-stack direction="vertical" gap="tight">
+            <s-text>Upload a CSV file with a single &quot;Code&quot; column:</s-text>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              disabled={isProcessing}
+            />
+            {fileName && (
+              <s-text>
+                {fileName}: {codes.length} unique codes
+              </s-text>
+            )}
+          </s-stack>
           <s-stack direction="inline" gap="base">
             <s-button
               onClick={updateDiscounts}
               {...(isLoading || isProcessing ? { loading: true } : {})}
-              disabled={isProcessing}
+              disabled={isProcessing || !codes.length}
             >
               {isProcessing ? "Processing..." : "Update"}
             </s-button>
@@ -247,8 +299,8 @@ export default function DiscountsUpdate() {
           {isProcessing && (
             <s-stack direction="vertical" gap="tight">
               <s-text>
-                Progress: {Math.min(totalProcessed, DISCOUNT_CODES_FOR_UPDATE.length)} /{" "}
-                {DISCOUNT_CODES_FOR_UPDATE.length} discounts processed
+                Progress: {Math.min(totalProcessed, codes.length)} / {codes.length} discounts
+                processed
               </s-text>
               <s-text>
                 Successful: {totalSuccessful} | Failed: {totalFailed}

@@ -8,6 +8,7 @@ query CartInput {
           product {
             productType
             title
+            id
           }
         }
       }

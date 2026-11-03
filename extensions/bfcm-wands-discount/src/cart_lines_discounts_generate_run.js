@@ -1,8 +1,8 @@
 import { DiscountClass, ProductDiscountSelectionStrategy } from "../generated/api";
 
-const ELIGIBLE_PRODUCT_TYPES = new Set(["mira-wands", "mira-kits"]);
+const ELIGIBLE_PRODUCT_TYPES = new Set(["mira-wands", "mira-kit"]);
 // Matched loosely so "™" / "™️" variations in the title don't break the exclusion
-const EXCLUDED_TITLE_FRAGMENT = "cortisol pattern";
+const EXCLUDED_ID = 10660037722405;
 
 // Final discount the customer gets, regardless of purchase type
 const TARGET_DISCOUNT = 0.27;
@@ -32,7 +32,7 @@ function isEligibleProduct(merchandise) {
 
   return (
     ELIGIBLE_PRODUCT_TYPES.has(product.productType?.trim().toLowerCase()) &&
-    !product.title.toLowerCase().includes(EXCLUDED_TITLE_FRAGMENT)
+    !product.id !== EXCLUDED_ID
   );
 }
 
