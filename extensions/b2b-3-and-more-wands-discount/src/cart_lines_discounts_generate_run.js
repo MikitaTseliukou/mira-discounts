@@ -39,22 +39,19 @@ export function cartLinesDiscountsGenerateRun(input) {
 
   let remainingQuantity = 4;
 
-  let targetsForHigherDiscount = miraWandsCartlines.map((line) => {
-    let currentQuantity = line.quantity;
+  let targetsForHigherDiscount = miraWandsCartlines
+    .map((line) => {
+      const currentQuantity = Math.min(line.quantity, remainingQuantity);
+      remainingQuantity -= currentQuantity;
 
-    if (remainingQuantity <= 0) {
-      currentQuantity = 0;
-    } else if (line.quantity > remainingQuantity) {
-      currentQuantity = remainingQuantity;
-    } else remainingQuantity -= currentQuantity;
-
-    return {
-      cartLine: {
-        id: line.id,
-        quantity: currentQuantity,
-      },
-    };
-  });
+      return {
+        cartLine: {
+          id: line.id,
+          quantity: currentQuantity,
+        },
+      };
+    })
+    .filter((target) => target.cartLine.quantity > 0);
 
   if (miraKitCartlines.length) {
     targetsForHigherDiscount.push({
