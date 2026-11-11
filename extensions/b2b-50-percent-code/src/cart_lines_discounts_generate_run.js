@@ -2,8 +2,9 @@ import { DiscountClass, ProductDiscountSelectionStrategy } from "../generated/ap
 
 const ELIGIBLE_PRODUCT_TYPE = "mira-kit";
 const DISCOUNT_PERCENTAGE = 50;
-// The code only works on orders whose subtotal (before discounts) is up to this amount
-const MAX_ORDER_SUBTOTAL = 300;
+// The code only works on orders whose subtotal (before discounts) is up to this amount,
+// expressed in the shop's base currency (USD). It is converted to the cart's currency at runtime.
+const MAX_ORDER_SUBTOTAL = 320;
 
 const DISCOUNT_MESSAGE = "50%";
 
@@ -27,7 +28,12 @@ export function cartLinesDiscountsGenerateRun(input) {
     return { operations: [] };
   }
 
-  if (Number(input.cart.cost.subtotalAmount.amount) > MAX_ORDER_SUBTOTAL) {
+  // Cart amounts are in the buyer's presentment currency, so convert the
+  // shop-currency threshold into that currency before comparing.
+  const rate = Number(input.presentmentCurrencyRate) || 1;
+  const maxSubtotalInCartCurrency = MAX_ORDER_SUBTOTAL * rate;
+
+  if (Number(input.cart.cost.subtotalAmount.amount) > maxSubtotalInCartCurrency) {
     return { operations: [] };
   }
 

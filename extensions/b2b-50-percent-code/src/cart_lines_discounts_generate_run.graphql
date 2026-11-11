@@ -20,4 +20,5 @@ query CartInput {
   discount {
     discountClasses
   }
+  presentmentCurrencyRate
 }

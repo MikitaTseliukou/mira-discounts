@@ -3,10 +3,16 @@ import { describe, it, expect } from "vitest";
 import { cartLinesDiscountsGenerateRun } from "./cart_lines_discounts_generate_run";
 import { DiscountClass } from "../generated/api";
 
-function buildInput({ discountClasses = [DiscountClass.Product], subtotal = "199.0", lines = [] } = {}) {
+function buildInput({
+  discountClasses = [DiscountClass.Product],
+  subtotal = "199.0",
+  lines = [],
+  presentmentCurrencyRate = "1.0",
+} = {}) {
   return {
     cart: { cost: { subtotalAmount: { amount: subtotal } }, lines },
     discount: { discountClasses },
+    presentmentCurrencyRate,
   };
 }
 
@@ -53,14 +59,35 @@ describe("cartLinesDiscountsGenerateRun", () => {
     expect(targetIds(result)).toEqual(["gid://shopify/CartLine/kit"]);
   });
 
-  it("applies when the order subtotal is exactly $300", () => {
-    const result = cartLinesDiscountsGenerateRun(buildInput({ subtotal: "300.0", lines: [line()] }));
+  it("applies when the order subtotal is exactly $320", () => {
+    const result = cartLinesDiscountsGenerateRun(buildInput({ subtotal: "320.0", lines: [line()] }));
     expect(result.operations).toHaveLength(1);
   });
 
-  it("returns no operations when the order subtotal is over $300", () => {
+  it("returns no operations when the order subtotal is over $320", () => {
     const result = cartLinesDiscountsGenerateRun(
-      buildInput({ subtotal: "300.01", lines: [line()] })
+      buildInput({ subtotal: "320.01", lines: [line()] })
+    );
+    expect(result.operations).toHaveLength(0);
+  });
+
+  it("converts the limit to the cart currency (e.g. CAD at 1.4)", () => {
+    // 320 USD * 1.4 = 448 CAD
+    const applies = cartLinesDiscountsGenerateRun(
+      buildInput({ subtotal: "448.0", presentmentCurrencyRate: "1.4", lines: [line()] })
+    );
+    expect(applies.operations).toHaveLength(1);
+
+    const over = cartLinesDiscountsGenerateRun(
+      buildInput({ subtotal: "448.01", presentmentCurrencyRate: "1.4", lines: [line()] })
+    );
+    expect(over.operations).toHaveLength(0);
+  });
+
+  it("uses a lower limit for stronger currencies (e.g. GBP at 0.8)", () => {
+    // 320 USD * 0.8 = 256 GBP
+    const result = cartLinesDiscountsGenerateRun(
+      buildInput({ subtotal: "300.0", presentmentCurrencyRate: "0.8", lines: [line()] })
     );
     expect(result.operations).toHaveLength(0);
   });
