@@ -52,6 +52,15 @@ export const action = async ({ request }) => {
   const batchIndex = parseInt(formData.get("batchIndex") || "0");
   const total = parseInt(formData.get("total") || "0");
   const currentBatch = JSON.parse(formData.get("codes") || "[]");
+  const percent = Number(formData.get("percent"));
+
+  if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    return {
+      done: true,
+      total,
+      invalidPercent: true,
+    };
+  }
 
   if (!currentBatch.length) {
     return {
@@ -105,7 +114,7 @@ export const action = async ({ request }) => {
             };
           }
 
-          // Update the discount percentage from 20% to 25%
+          // Update the discount percentage to the value entered in the form
           const response = await admin.graphql(
             `#graphql
               mutation discountCodeBasicUpdate($id: ID!, $basicCodeDiscount: DiscountCodeBasicInput!) {
@@ -126,7 +135,7 @@ export const action = async ({ request }) => {
                 basicCodeDiscount: {
                   customerGets: {
                     value: {
-                      percentage: 0.29,
+                      percentage: percent / 100,
                     },
                   },
                 },
@@ -191,6 +200,10 @@ export default function DiscountsUpdate() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [codes, setCodes] = useState([]);
   const [fileName, setFileName] = useState("");
+  const [percent, setPercent] = useState("");
+  const percentValue = Number(percent);
+  const isPercentValid =
+    percent !== "" && Number.isFinite(percentValue) && percentValue > 0 && percentValue <= 100;
   const lastProcessedBatch = useRef(-1);
 
   const submitBatch = (batchIndex) => {
@@ -199,6 +212,7 @@ export default function DiscountsUpdate() {
     formData.append("batchIndex", batchIndex.toString());
     formData.append("total", codes.length.toString());
     formData.append("codes", JSON.stringify(batchCodes));
+    formData.append("percent", percent);
     fetcher.submit(formData, { method: "POST" });
   };
 
@@ -240,6 +254,11 @@ export default function DiscountsUpdate() {
 
       // Automatically submit next batch
       submitBatch(data.batchIndex + 1);
+    } else if (data.invalidPercent) {
+      setIsProcessing(false);
+      shopify.toast.show("Invalid percentage. Enter a value between 0 and 100.", {
+        isError: true,
+      });
     } else if (data && data.done) {
       console.log("All batches completed!");
       setIsProcessing(false);
@@ -266,7 +285,7 @@ export default function DiscountsUpdate() {
 
   return (
     <s-page heading="Discounts Update">
-      <s-section heading="Update Discounts (20% → 25%)">
+      <s-section heading="Update Discount Percentage">
         <s-stack direction="vertical" gap="base">
           <s-stack direction="vertical" gap="tight">
             <s-text>Upload a CSV file with a single &quot;Code&quot; column:</s-text>
@@ -282,11 +301,24 @@ export default function DiscountsUpdate() {
               </s-text>
             )}
           </s-stack>
+          <s-stack direction="vertical" gap="tight">
+            <s-text>New discount percentage (%):</s-text>
+            <input
+              type="number"
+              min="0.01"
+              max="100"
+              step="0.01"
+              placeholder="e.g. 29"
+              value={percent}
+              onChange={(event) => setPercent(event.target.value)}
+              disabled={isProcessing}
+            />
+          </s-stack>
           <s-stack direction="inline" gap="base">
             <s-button
               onClick={updateDiscounts}
               {...(isLoading || isProcessing ? { loading: true } : {})}
-              disabled={isProcessing || !codes.length}
+              disabled={isProcessing || !codes.length || !isPercentValid}
             >
               {isProcessing ? "Processing..." : "Update"}
             </s-button>
@@ -308,7 +340,7 @@ export default function DiscountsUpdate() {
             </s-stack>
           )}
 
-          {data && data.done && (
+          {data && data.done && !data.invalidPercent && (
             <s-stack direction="vertical" gap="base">
               <s-text variant="success">
                 ✓ Completed! {totalSuccessful} discounts updated successfully, {totalFailed} failed

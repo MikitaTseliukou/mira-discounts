@@ -4,7 +4,7 @@ const ELIGIBLE_PRODUCT_TYPE = "mira-kit";
 const DISCOUNT_PERCENTAGE = 50;
 // The code only works on orders whose subtotal (before discounts) is up to this amount,
 // expressed in the shop's base currency (USD). It is converted to the cart's currency at runtime.
-const MAX_ORDER_SUBTOTAL = 320;
+const MAX_ORDER_SUBTOTAL = 400;
 
 const DISCOUNT_MESSAGE = "50%";
 
