@@ -3,6 +3,8 @@ import { describe, it, expect } from "vitest";
 import { cartLinesDiscountsGenerateRun } from "./cart_lines_discounts_generate_run";
 import { DiscountClass } from "../generated/api";
 
+const CORTISOL_PRODUCT_ID = "gid://shopify/Product/10660037722405";
+
 function buildInput({ discountClasses = [DiscountClass.Product], lines = [] } = {}) {
   return {
     cart: { lines },
@@ -14,13 +16,14 @@ function line({
   id = "gid://shopify/CartLine/wand",
   productType = "mira-wands",
   title = "Mira Fertility Max Wands",
+  productId = "gid://shopify/Product/1",
   sellingPlanName = null,
 } = {}) {
   return {
     id,
     merchandise: {
       id: "gid://shopify/ProductVariant/1",
-      product: { productType, title },
+      product: { id: productId, productType, title },
     },
     sellingPlanAllocation: sellingPlanName
       ? {
@@ -63,7 +66,7 @@ describe("cartLinesDiscountsGenerateRun", () => {
 
   it("excludes Mira Cortisol Pattern Wands", () => {
     const result = cartLinesDiscountsGenerateRun(
-      buildInput({ lines: [line({ title: "Mira Cortisol Pattern™️ Wands" })] })
+      buildInput({ lines: [line({ productId: CORTISOL_PRODUCT_ID, title: "Mira Cortisol Pattern™️ Wands" })] })
     );
     expect(result.operations).toHaveLength(0);
   });
@@ -76,7 +79,7 @@ describe("cartLinesDiscountsGenerateRun", () => {
 
   it("applies 27% to a one-time kit order", () => {
     const result = cartLinesDiscountsGenerateRun(
-      buildInput({ lines: [line({ productType: "mira-kits", title: "Mira Fertility Plus Starter Kit" })] })
+      buildInput({ lines: [line({ productType: "mira-kit", title: "Mira Fertility Plus Starter Kit" })] })
     );
     expect(percentages(result)).toEqual([{ id: "gid://shopify/CartLine/wand", value: 27 }]);
   });
@@ -114,9 +117,9 @@ describe("cartLinesDiscountsGenerateRun", () => {
       buildInput({
         lines: [
           line({ id: "gid://shopify/CartLine/one-time" }),
-          line({ id: "gid://shopify/CartLine/kit", productType: "mira-kits" }),
+          line({ id: "gid://shopify/CartLine/kit", productType: "mira-kit" }),
           line({ id: "gid://shopify/CartLine/sub", sellingPlanName: "Deliver every 2 months" }),
-          line({ id: "gid://shopify/CartLine/cortisol", title: "Mira Cortisol Pattern™ Wands" }),
+          line({ id: "gid://shopify/CartLine/cortisol", productId: CORTISOL_PRODUCT_ID }),
           line({ id: "gid://shopify/CartLine/analyzer", productType: "mira-analyzer" }),
         ],
       })

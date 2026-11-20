@@ -43,7 +43,10 @@ const FUNCTIONS_SUPPORTING_SHIPPING = new Set([
 
 // Functions whose discount should apply to every subscription payment,
 // not just the first (Shopify defaults recurringCycleLimit to 1).
-const FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS = new Set(["bfcm-wands-discount"]);
+const FUNCTIONS_APPLYING_ON_ALL_RECURRING_PAYMENTS = new Set([
+  "bfcm-wands-discount",
+  "bfcm-stage-2-discount",
+]);
 
 const END_OF_DAY_TIME = "23:59";
 
@@ -464,6 +467,9 @@ export default function AdditionalPage() {
               <option value="bfcm-wands-discount">
                 BFCM 27% - Wands & Kits (incl. Loop subscriptions)
               </option>
+              <option value="bfcm-stage-2-discount">
+                BFCM Stage 2 33% - Wands & Kits (incl. Loop subscriptions)
+              </option>
               <option value="carrot-259-code">
                 Carrot $269 off Healthcare Expert’s Choice and free shipping
               </option>
@@ -471,6 +477,11 @@ export default function AdditionalPage() {
             {functionHandle === "bfcm-wands-discount" && (
               <s-text tone="subdued">
                 Note: this discount is 27% off Mira wands and Mira kits.
+              </s-text>
+            )}
+            {functionHandle === "bfcm-stage-2-discount" && (
+              <s-text tone="subdued">
+                Note: this discount is 33% off Mira wands and Mira kits.
               </s-text>
             )}
           </s-stack>
